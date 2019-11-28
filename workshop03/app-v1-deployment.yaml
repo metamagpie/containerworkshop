@@ -1,0 +1,59 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: nwapp-v1-deploy
+  namespace: nwapp
+  labels:
+    name: nwapp-v1
+    version: v1
+
+spec:
+  # number of pods
+  replicas: 3
+  selector:
+    matchLabels:
+      name: nwapp-v1
+      version: v1
+  template:
+    # pod template
+    metadata:
+      name: nwapp-v1-pod
+      labels:
+        name: nwapp-v1
+        version: v1
+    spec:
+      containers:
+        - name: nwapp-container
+          image: metamagpie/nwapp:latest
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: nwapp-port
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+          env:
+            - name: DB_USER
+              value: "root"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "nwdb-secret"
+                  key: "db_password"
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: "nwdb-config"
+                  key: "db_host"
+            - name: DB_PORT
+              value: "3306"
+            - name: INSTANCE_IP_ADDRESS
+              valueFrom:
+                fieldRef:
+                  fieldPath: "status.podIP"
+          ports:
+            - name: nwapp-port
+              containerPort: 3000
